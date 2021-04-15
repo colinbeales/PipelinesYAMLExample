@@ -1,0 +1,222 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  - master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: "Release"
+
+stages:
+  - stage: BuildAll
+    jobs:
+      - job: BuildBlazorApp
+        steps:
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: "**/*.csproj"
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              projects: "**/*.csproj"
+              arguments: "--configuration $(BuildConfiguration)"
+          - task: DotNetCoreCLI@2
+            displayName: Test
+            inputs:
+              command: test
+              projects: "**/*[Tt]ests/*.csproj"
+              arguments: "--configuration $(BuildConfiguration)"
+          - task: DotNetCoreCLI@2
+            displayName: Publish
+            inputs:
+              command: publish
+              projects: "**/*.csproj"
+              publishWebProjects: false
+              arguments: "--configuration $(BuildConfiguration) --output $(Pipeline.Workspace)/output"
+              zipAfterPublish: True
+          - task: CopyFiles@2
+            displayName: "Copy Files to: $(Pipeline.Workspace)"
+            inputs:
+              SourceFolder: "$(Build.SourcesDirectory)"
+              Contents: |
+                IaC/**
+              TargetFolder: "$(Pipeline.Workspace)/output"
+          - publish: "$(Pipeline.Workspace)/output"
+            artifact: WebApp
+
+  ################################################################################################
+  ##
+  ##  BUILD & Package Each project seperately with jobs if preferred (rather than above BuildAll)
+  ##  e.g.
+  ##
+  #################################################################################################
+  ## - job: BuildBlazorApp
+  ##   steps:
+  ##   - script: dotnet build --configuration $(buildConfiguration) MyAPI1
+  ##     displayName: 'dotnet build $(buildConfiguration)'
+  ## - job: BuildWebAPI1
+  ##   steps:
+  ##   - script: dotnet build --configuration $(buildConfiguration) MyAPI1
+  ##     displayName: 'dotnet build $(buildConfiguration)'
+  ##################################################################################################
+
+  - stage: DeployDev
+    jobs:
+      - deployment: DeployBlazorApp
+        displayName: Deploy Blazor Web App
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: WebApp
+                - task: AzureResourceManagerTemplateDeployment@3
+                  inputs:
+                    deploymentScope: "Resource Group"
+                    azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
+                    subscriptionId: "YOUR-SUBSCRIPTION-ID"
+                    action: "Create Or Update Resource Group"
+                    resourceGroupName: "MyAppDeleteMeLateGroup"
+                    location: "UK South"
+                    templateLocation: "Linked artifact"
+                    csmFile: "$(Pipeline.Workspace)/WebApp/IaC/BlazorWebApp.json"
+                    csmParametersFile: "$(Pipeline.Workspace)/WebApp/IaC/BlazorWebApp.parameters.json"
+                    overrideParameters: "-webAppName colinbealesBlazorApp"
+                    deploymentMode: "Incremental"
+                - task: AzureRmWebAppDeployment@4
+                  inputs:
+                    ConnectionType: "AzureRM"
+                    azureSubscription: YOUR-SERVICE-CONNECTION"
+                    appType: "webAppLinux"
+                    WebAppName: "colinbealesBlazorApp"
+                    packageForLinux: "$(Pipeline.Workspace)/WebApp/BlazorWebApp.zip"
+                    RuntimeStack: "DOTNETCORE|5.0"
+
+      - deployment: DeployMyAPI1
+        displayName: Deploy API1
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI1"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI1.zip"
+
+      - deployment: DeployMyAPI2
+        displayName: Deploy API2
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI2"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI2.zip"
+
+      - deployment: DeployMyAPI3
+        displayName: Deploy API3
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI3"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI3.zip"
+
+  - stage: DeployProd
+    jobs:
+      - deployment: DeployBlazorApp
+        displayName: Deploy Blazor Web App
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-prod"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: WebApp
+                - task: AzureResourceManagerTemplateDeployment@3
+                  inputs:
+                    deploymentScope: "Resource Group"
+                    azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
+                    subscriptionId: "YOUR-SUBSCRIPTION-ID"
+                    action: "Create Or Update Resource Group"
+                    resourceGroupName: "MyAppDeleteMeLateGroup"
+                    location: "UK South"
+                    templateLocation: "Linked artifact"
+                    csmFile: "$(Pipeline.Workspace)/WebApp/IaC/BlazorWebApp.json"
+                    csmParametersFile: "$(Pipeline.Workspace)/WebApp/IaC/BlazorWebApp.parameters.json"
+                    overrideParameters: "-webAppName colinbealesBlazorApp-prod"
+                    deploymentMode: "Incremental"
+                - task: AzureRmWebAppDeployment@4
+                  inputs:
+                    ConnectionType: "AzureRM"
+                    azureSubscription: "YOUR-SERVICE-CONNECTION"
+                    appType: "webAppLinux"
+                    WebAppName: "colinbealesBlazorApp-prod"
+                    packageForLinux: "$(Pipeline.Workspace)/WebApp/BlazorWebApp.zip"
+                    RuntimeStack: "DOTNETCORE|5.0"
+
+      - deployment: DeployMyAPI1
+        displayName: Deploy API1
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-prod"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI1-prod"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI1.zip"
+
+      - deployment: DeployMyAPI2
+        displayName: Deploy API2
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI2-prod"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI2.zip"
+
+      - deployment: DeployMyAPI3
+        displayName: Deploy API3
+        pool:
+          vmImage: "Ubuntu-latest"
+        environment: "MyApp-dev"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: api-deployment-template.yml
+                  parameters:
+                    apiAppName: "colinbealesAPI3-prod"
+                    packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI3.zip"

@@ -1,0 +1,30 @@
+parameters:
+  - name: "apiAppName"
+    type: string
+  - name: "packageLocation"
+    type: string
+
+steps:
+  - download: current
+    artifact: WebApp
+  - task: AzureResourceManagerTemplateDeployment@3
+    inputs:
+      deploymentScope: "Resource Group"
+      azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
+      subscriptionId: "YOUR-SUBSCRIPTION-ID"
+      action: "Create Or Update Resource Group"
+      resourceGroupName: "MyAppDeleteMeLateGroup"
+      location: "UK South"
+      templateLocation: "Linked artifact"
+      csmFile: "$(Pipeline.Workspace)/WebApp/IaC/WebAPI.json"
+      csmParametersFile: "$(Pipeline.Workspace)/WebApp/IaC/WebAPI.parameters.json"
+      overrideParameters: "-apiAppName ${{ parameters.apiAppName }}"
+      deploymentMode: "Incremental"
+  - task: AzureRmWebAppDeployment@4
+    inputs:
+      ConnectionType: "AzureRM"
+      azureSubscription: "YOUR-SERVICE-CONNECTION"
+      appType: "webAppLinux"
+      WebAppName: ${{ parameters.apiAppName }}
+      packageForLinux: ${{ parameters.packageLocation }}
+      RuntimeStack: "DOTNETCORE|5.0"
