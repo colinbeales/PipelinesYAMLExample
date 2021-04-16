@@ -11,6 +11,8 @@ pool:
 
 variables:
   buildConfiguration: "Release"
+  serviceConnection: "YOUR-SERVICE-CONNECTION"
+  azureSubscriptionId: "YOUR-SUBSCRIPTION-ID"
 
 stages:
   - stage: BuildAll
@@ -83,8 +85,8 @@ stages:
                 - task: AzureResourceManagerTemplateDeployment@3
                   inputs:
                     deploymentScope: "Resource Group"
-                    azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
-                    subscriptionId: "YOUR-SUBSCRIPTION-ID"
+                    azureResourceManagerConnection: "$(serviceConnection)"
+                    subscriptionId: "$(azureSubscriptionId)"
                     action: "Create Or Update Resource Group"
                     resourceGroupName: "MyAppDeleteMeLateGroup"
                     location: "UK South"
@@ -96,7 +98,7 @@ stages:
                 - task: AzureRmWebAppDeployment@4
                   inputs:
                     ConnectionType: "AzureRM"
-                    azureSubscription: YOUR-SERVICE-CONNECTION"
+                    azureSubscription: "$(serviceConnection)"
                     appType: "webAppLinux"
                     WebAppName: "colinbealesBlazorApp"
                     packageForLinux: "$(Pipeline.Workspace)/WebApp/BlazorWebApp.zip"
@@ -115,6 +117,8 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI1"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI1.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"
 
       - deployment: DeployMyAPI2
         displayName: Deploy API2
@@ -129,6 +133,8 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI2"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI2.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"
 
       - deployment: DeployMyAPI3
         displayName: Deploy API3
@@ -143,6 +149,8 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI3"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI3.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"
 
   - stage: DeployProd
     jobs:
@@ -160,8 +168,8 @@ stages:
                 - task: AzureResourceManagerTemplateDeployment@3
                   inputs:
                     deploymentScope: "Resource Group"
-                    azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
-                    subscriptionId: "YOUR-SUBSCRIPTION-ID"
+                    azureResourceManagerConnection: "$(serviceConnection)"
+                    subscriptionId: "$(azureSubscriptionId)"
                     action: "Create Or Update Resource Group"
                     resourceGroupName: "MyAppDeleteMeLateGroup"
                     location: "UK South"
@@ -173,7 +181,7 @@ stages:
                 - task: AzureRmWebAppDeployment@4
                   inputs:
                     ConnectionType: "AzureRM"
-                    azureSubscription: "YOUR-SERVICE-CONNECTION"
+                    azureSubscription: "$(serviceConnection)"
                     appType: "webAppLinux"
                     WebAppName: "colinbealesBlazorApp-prod"
                     packageForLinux: "$(Pipeline.Workspace)/WebApp/BlazorWebApp.zip"
@@ -192,6 +200,8 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI1-prod"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI1.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"
 
       - deployment: DeployMyAPI2
         displayName: Deploy API2
@@ -206,6 +216,8 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI2-prod"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI2.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"
 
       - deployment: DeployMyAPI3
         displayName: Deploy API3
@@ -220,3 +232,5 @@ stages:
                   parameters:
                     apiAppName: "colinbealesAPI3-prod"
                     packageLocation: "$(Pipeline.Workspace)/WebApp/MyAPI3.zip"
+                    azureSubscriptionId: "$(azureSubscriptionId)"
+                    serviceConnection: "$(serviceConnection)"

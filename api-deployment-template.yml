@@ -3,6 +3,10 @@ parameters:
     type: string
   - name: "packageLocation"
     type: string
+  - name: "azureSubscriptionId"
+    type: string
+  - name: "serviceConnection"
+    type: string
 
 steps:
   - download: current
@@ -10,8 +14,8 @@ steps:
   - task: AzureResourceManagerTemplateDeployment@3
     inputs:
       deploymentScope: "Resource Group"
-      azureResourceManagerConnection: "YOUR-SERVICE-CONNECTION"
-      subscriptionId: "YOUR-SUBSCRIPTION-ID"
+      azureResourceManagerConnection: "${{ parameters.serviceConnection }}"
+      subscriptionId: "${{ parameters.azureSubscriptionId }}"
       action: "Create Or Update Resource Group"
       resourceGroupName: "MyAppDeleteMeLateGroup"
       location: "UK South"
@@ -23,7 +27,7 @@ steps:
   - task: AzureRmWebAppDeployment@4
     inputs:
       ConnectionType: "AzureRM"
-      azureSubscription: "YOUR-SERVICE-CONNECTION"
+      azureSubscription: "${{ parameters.serviceConnection }}"
       appType: "webAppLinux"
       WebAppName: ${{ parameters.apiAppName }}
       packageForLinux: ${{ parameters.packageLocation }}
